@@ -9,62 +9,123 @@ import LanguageIcon from "@mui/icons-material/Language";
 import EmailOutlinedIcon from "@mui/icons-material/EmailOutlined";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import Posts from "../../components/posts/Posts";
+import { useContext, useState } from "react";
+import { AuthContext } from "../../context/authContext";
+import { useLocation } from "react-router-dom";
+import { makeRequest } from "../../axios";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import Update from "../../components/update/Update";
 
 const Profile = () => {
+  const { currentUser } = useContext(AuthContext);
+  const [openUpdate, setOpenUpdate] = useState(false);
+
+  const userId = parseInt(useLocation().pathname.split("/")[2]);
+
+  const { isLoading, error, data } = useQuery({
+    queryKey: ["user", userId],
+    queryFn: () =>
+      makeRequest.get("/users/find/" + userId).then((res) => {
+        return res.data;
+      }),
+  });
+
+  const {
+    isLoading: rIsLoading,
+    error: rError,
+    data: rData,
+  } = useQuery({
+    queryKey: ["relationship", userId],
+    queryFn: () =>
+      makeRequest.get("/relationships?followedUserId=" + userId).then((res) => {
+        return res.data;
+      }),
+  });
+
+  const queryClient = useQueryClient();
+
+  const mutation = useMutation(
+    (following) => {
+      if (following)
+        return makeRequest.delete("/relationships?userId=" + userId);
+      return makeRequest.post("/relationships", { userId });
+    },
+    {
+      onSuccess: () => {
+        queryClient.invalidateQueries(["relationship"]);
+      },
+    }
+  );
+
+  const handleFollow = () => {
+    mutation.mutate(rData.includes(currentUser.id));
+  };
+
   return (
     <div className="profile">
-      <div className="images">
-        <img
-          src="https://images.pexels.com/photos/14344662/pexels-photo-14344662.jpeg?auto=compress&cs=tinysrgb&w=600&lazy=load"
-          alt=""
-          className="cover"
-        />
-        <img
-          src="https://images.pexels.com/photos/6963605/pexels-photo-6963605.jpeg?auto=compress&cs=tinysrgb&w=600&lazy=load"
-          alt=""
-          className="profilePic"
-        />
-      </div>
-      <div className="profileContainer">
-        <div className="uInfo">
-          <div className="left">
-            <a href="http://facebook.com" target="_blank">
-              <FacebookTwoToneIcon fontSize="large" />
-            </a>
-            <a href="http://instagram.com" target="_blank">
-              <InstagramIcon fontSize="large" />
-            </a>
-            <a href="http://twitter.com" target="_blank">
-              <TwitterIcon fontSize="large" />
-            </a>
-            <a href="http://linkedin.com" target="_blank">
-              <LinkedInIcon fontSize="large" />
-            </a>
-            <a href="http://pinterest.com" target="_blank">
-              <PinterestIcon fontSize="large" />
-            </a>
+      {isLoading ? (
+        "Loading..."
+      ) : (
+        <>
+          <div className="images">
+            <img src={"/upload/" + data.coverPic} alt="" className="cover" />
+            <img
+              src={"/upload/" + data.profilePic}
+              alt=""
+              className="profilePic"
+            />
           </div>
-          <div className="center">
-            <span>John Doe</span>
-            <div className="info">
-              <div className="item">
-                <PlaceIcon />
-                <span>India</span>
+          <div className="profileContainer">
+            <div className="uInfo">
+              <div className="left">
+                <a href="http://facebook.com" target="_blank">
+                  <FacebookTwoToneIcon fontSize="large" />
+                </a>
+                <a href="http://instagram.com" target="_blank">
+                  <InstagramIcon fontSize="large" />
+                </a>
+                <a href="http://twitter.com" target="_blank">
+                  <TwitterIcon fontSize="large" />
+                </a>
+                <a href="http://linkedin.com" target="_blank">
+                  <LinkedInIcon fontSize="large" />
+                </a>
+                <a href="http://pinterest.com" target="_blank">
+                  <PinterestIcon fontSize="large" />
+                </a>
               </div>
-              <div className="item">
-                <LanguageIcon />
-                <span>jeetubangari.netlify.app</span>
+              <div className="center">
+                <span>{data.name}</span>
+                <div className="info">
+                  <div className="item">
+                    <PlaceIcon />
+                    <span>{data.city}</span>
+                  </div>
+                  <div className="item">
+                    <LanguageIcon />
+                    <span>{data.website}</span>
+                  </div>
+                </div>
+                {rIsLoading ? (
+                  "Loading..."
+                ) : userId === currentUser.id ? (
+                  <button onClick={() => setOpenUpdate(true)}>Update</button>
+                ) : (
+                  <button onClick={handleFollow}>
+                    {rData.includes(currentUser.id) ? "Following" : "Follow"}
+                  </button>
+                )}
+              </div>
+              <div className="right">
+                <EmailOutlinedIcon />
+                <MoreVertIcon />
               </div>
             </div>
-            <button>Follow</button>
+            <Posts userId={userId} />
           </div>
-          <div className="right">
-            <EmailOutlinedIcon />
-            <MoreVertIcon />
-          </div>
-        </div>
-        <Posts />
-      </div>
+        </>
+      )}
+      {openUpdate && <Update setOpenUpdate={setOpenUpdate} user={data} />}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import axios from "axios";
 import { createContext, useEffect, useState } from "react";
 
 export const AuthContext = createContext();
@@ -7,14 +8,19 @@ export const AuthContextProvider = ({ children }) => {
     JSON.parse(localStorage.getItem("user")) || null
   );
 
-  const login = () => {
-    // TODO
-    setCurrentUser({
-      id: 1,
-      name: "John Doe",
-      profilePic:
-        "https://i.cbc.ca/1.6128145.1628713609!/fileImage/httpImage/image.jpg_gen/derivatives/16x9_780/regina-john-doe.jpg",
-    });
+  const login = async (inputs) => {
+    const res = await axios.post(
+      "http://localhost:8800/api/auth/login",
+      inputs,
+      { withCredentials: true }
+    );
+
+    setCurrentUser(res.data);
+  };
+
+  const logout = async () => {
+    await axios.post("http://localhost:8800/api/auth/logout");
+    setCurrentUser(null);
   };
 
   useEffect(() => {
@@ -22,7 +28,7 @@ export const AuthContextProvider = ({ children }) => {
   }, [currentUser]);
 
   return (
-    <AuthContext.Provider value={{ currentUser, login }}>
+    <AuthContext.Provider value={{ currentUser, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
