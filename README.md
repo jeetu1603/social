@@ -23,7 +23,7 @@
 |----------------------|--------|---------------------|
 | /api/likes?postId=[] | GET | get likes of a post |
 | /api/likes/ | POST | like a post |
-| /api/likes?postId=[] | DELETE | delete a post |
+| /api/likes?postId=[] | DELETE | unlike a post |
 
 **comments Route**
 | Endpoint | Method | Description |
